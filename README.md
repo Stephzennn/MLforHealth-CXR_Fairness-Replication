@@ -18,3 +18,16 @@ Here, some results of this research paper can be thoroughly validated. Benchmark
 One area that may lack thoroughness is in testing the accuracy of the CheXpert labeling, particularly for the "No Finding" label. The paper highlights this by referencing other studies that have pointed out the inaccuracies of the rule-based labeling used in CheXpert.
 
 The paper uses its own expert's labeling as the gold standard to demonstrate discrepancies in accuracy. Without access to a similar expert, we will rely on the expert-labeled data provided by the paper, which may be subject to bias.
+
+Methodology
+
+In the paper, first there is a benchmarking of three baseline methods
+
+\begin{itemize}
+\item \textbf{Empirical Risk Minimization (ERM)}: This method minimizes the overall population risk without considering the composition of different groups. The goal is to reduce the average error across the entire population.
+
+    \item \textbf{Balanced ERM}: This technique addresses the issue of imbalanced group sizes by upsampling the minority groups. By doing so, it aims to minimize the risk in a population where all groups are equally represented. This helps ensure that minority groups are not overshadowed by majority groups in the training process.
+
+    \item \textbf{Stratified ERM}: Instead of training a single model for the entire population, this approach involves learning a separate model for each protected group. This allows for more tailored and potentially fairer predictions, as each group's unique characteristics are taken into account.
+
+\end{itemize}
