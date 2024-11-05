@@ -58,3 +58,10 @@ In the research paper the model used is an ImageNet-pretrained but replace the f
 
 Optimization : - Train all models using the Adam optimizer using a batch size of 64 and a learning rate of 10^-4.
 **Image Augmentation**:
+
+Computational Implementation:
+
+Permininary replication wil entail the predicting of the three classes,
+As a threshold-free metrics, - Area under the ROC curve, Binary cross-entropy, Expected calibration error
+
+We will use the same threshold for all groups.
