@@ -42,3 +42,19 @@ GroupDRO (Sagawa et al., 2020): This method exponentially increases the weights 
 ARL (Lahoti et al., 2020): ARL stands for Adversarial Reweighted Learning. It's a group-unaware method, meaning it doesn't explicitly consider group membership. Instead, it weights each sample using an adversary that tries to maximize the weighted loss. This technique aims to make the model focus on harder-to-predict samples, indirectly improving fairness.
 
 JTT (Liu et al., 2021): Just Train Twice (JTT) is another group-unaware method. It trains an additional classifier that increases the weights of samples misclassified by the initial ERM (Empirical Risk Minimization) classifier. This helps to correct errors and improve the overall model performance, especially for minority or difficult cases.
+
+Data
+In the paper we will be using hte x-ray images form MIMIC-CXR and CheXpert.
+
+And as our definition of protected groups, we define protected groups on attribuutes specifically ,(1) Raceand Ethnicity, (2) sex, (3) age
+
+We split each dataset into a 16.7% test set and an 83.3% cross-validation set split into 5 folds.
+
+Models
+
+In the research paper the model used is an ImageNet-pretrained but replace the final layer with a 2-layer neural network with 384 hidden units and 1 output unit.
+
+(Reference) We train 5 models for each hyperparameter setting, using each fold for model selection and early stoppin with the remaining 4 folds left for training.(We wont do this in Draft, we might redce iteration )
+
+Optimization : - Train all models using the Adam optimizer using a batch size of 64 and a learning rate of 10^-4.
+**Image Augmentation**:
