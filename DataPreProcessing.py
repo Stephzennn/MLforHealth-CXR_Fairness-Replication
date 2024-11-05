@@ -116,3 +116,61 @@ def process_MIMIC(split, only_frontal, return_all_labels=True):
         columns_to_return += ['Enlarged Cardiomediastinum', 'Airspace Opacity', 'Lung Lesion', 'Pleural Other', 'Fracture', 'Support Devices']
     
     return split[columns_to_return]
+
+#The process_CXP function is designed to preprocess the CheXpert (CXP) dataset by standardizing and transforming data
+
+'''
+Bin Age: Converts continuous age values into age range categories ('18-40', '40-60', '60-80', '80-').
+
+Backup subject_id: Stores subject_id in copy_subjectid.
+
+Drop subject_id Column and Replace Values: Removes subject_id and standardizes other values:
+
+Replace [None], -1, "[False]", "[True]", "[ True]" with [0, 0, 0, 1, 1].
+
+'''
+
+
+def process_CXP(split, only_frontal, return_all_labels=True):
+    def bin_age(x):
+        if 0 <= x < 40: return '18-40'
+        elif 40 <= x < 60: return '40-60'
+        elif 60 <= x < 80: return '60-80'
+        else: return '80-'
+
+    split['Age'] = split['Age'].apply(bin_age)
+
+    copy_subjectid = split['subject_id']
+    split = split.drop(columns=['subject_id']).replace(
+        [[None], -1, "[False]", "[True]", "[ True]"], [0, 0, 0, 1, 1]
+    )
+    split['subject_id'] = copy_subjectid.astype(str)
+    
+    split['Sex'] = np.where(split['Sex'] == 'Female', 'F', split['Sex'])
+    split['Sex'] = np.where(split['Sex'] == 'Male', 'M', split['Sex'])
+    split = split.rename(columns={
+        'Pleural Effusion': 'Effusion',
+        'Lung Opacity': 'Airspace Opacity',
+        'Sex': 'sex',
+        'Age': 'age'
+    })
+    
+    split['path'] = split['Path'].astype(str).apply(lambda x: os.path.join(Constants.image_paths['CXP'], x))
+    split['frontal'] = split['Frontal/Lateral'] == 'Frontal'
+    
+    if only_frontal:
+        split = split[split['frontal']]
+    
+    split['env'] = 'CXP'
+    split['study_id'] = split['path'].apply(lambda x: x[x.index('patient'):x.rindex('/')])
+    
+    columns_to_return = [
+        'subject_id', 'path', 'sex', 'age', 'env', 'frontal', 'study_id', 'fold_id', 'ethnicity'
+    ] + Constants.take_labels
+
+    if return_all_labels:
+        columns_to_return += [
+            'Enlarged Cardiomediastinum', 'Airspace Opacity', 'Lung Lesion', 'Pleural Other', 'Fracture', 'Support Devices'
+        ]
+    
+    return split[columns_to_return]
