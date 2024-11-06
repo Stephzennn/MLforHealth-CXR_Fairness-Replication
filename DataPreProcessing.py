@@ -1,6 +1,6 @@
 import os
 from collections import defaultdict
-
+import numpy as np
 PATH_MIMIC = "here will be the path to the MIMIC cxr dataset"
 
 PATH_CXP =   "here will be the path to the CXP dataset"
@@ -132,6 +132,9 @@ Replace [None], -1, "[False]", "[True]", "[ True]" with [0, 0, 0, 1, 1].
 
 
 def process_CXP(split, only_frontal, return_all_labels=True):
+    prepareDict = prepare_image_data_paths()
+    image_paths = prepareDict['image_paths']
+    take_labels = prepareDict['take_labels']
     def bin_age(x):
         if 0 <= x < 40: return '18-40'
         elif 40 <= x < 60: return '40-60'
@@ -155,7 +158,7 @@ def process_CXP(split, only_frontal, return_all_labels=True):
         'Age': 'age'
     })
     
-    split['path'] = split['Path'].astype(str).apply(lambda x: os.path.join(Constants.image_paths['CXP'], x))
+    split['path'] = split['Path'].astype(str).apply(lambda x: os.path.join(image_paths['CXP'], x))
     split['frontal'] = split['Frontal/Lateral'] == 'Frontal'
     
     if only_frontal:
@@ -166,7 +169,7 @@ def process_CXP(split, only_frontal, return_all_labels=True):
     
     columns_to_return = [
         'subject_id', 'path', 'sex', 'age', 'env', 'frontal', 'study_id', 'fold_id', 'ethnicity'
-    ] + Constants.take_labels
+    ] + take_labels
 
     if return_all_labels:
         columns_to_return += [
@@ -174,3 +177,47 @@ def process_CXP(split, only_frontal, return_all_labels=True):
         ]
     
     return split[columns_to_return]
+
+
+# The function below returns a specific function based on the provided string value.
+
+def get_process_func(env):
+    
+    
+    if env == 'MIMIC':
+        return process_MIMIC
+    if env == 'CXP':
+        return process_CXP
+    raise NotImplementedError
+
+
+import pandas as pd
+
+def load_df(env, val_fold, only_frontal=False, query_str=None):
+    assert isinstance(val_fold, str)
+    prepareDict = prepare_image_data_paths()
+    df_paths = prepareDict['df_paths']
+   
+    # Load the dataset
+    df = pd.read_csv(df_paths[env])
+    
+    # Process the dataset based on the environment
+    func = get_process_func(env)
+    df = func(df, only_frontal)
+    
+    # Apply query if provided
+    if query_str:
+        df = df.query(query_str)
+    
+    # Determine train, validation, and test folds
+    train_folds = [i for i in df.fold_id.unique() if i not in ['test', val_fold]]
+    ans = {
+        'train': df[df.fold_id.isin(train_folds)].reset_index(drop=True),
+        'val': df[df.fold_id == val_fold].reset_index(drop=True),
+        'test': df[df.fold_id == 'test'].reset_index(drop=True)
+    }
+    
+    # Ensure each split has at least one row
+    assert all(len(ans[i]) > 0 for i in ans)
+    
+    return ans
