@@ -1,10 +1,23 @@
 import os
 from collections import defaultdict
 import numpy as np
+import torch
+import os
+import numpy as np
+from PIL import Image
+import pandas as pd
+from torchvision import transforms
+import pickle
+from pathlib import Path
+from torch.utils.data import Dataset, ConcatDataset
+
+
 PATH_MIMIC = "here will be the path to the MIMIC cxr dataset"
 
 PATH_CXP =   "here will be the path to the CXP dataset"
 
+CXP_details = "The path towards CXP_details"
+cache_dir = 'The path towards chexpert '
 
 def prepare_image_data_paths():
 
@@ -221,3 +234,53 @@ def load_df(env, val_fold, only_frontal=False, query_str=None):
     assert all(len(ans[i]) > 0 for i in ans)
     
     return ans
+
+class ConcatWrapper(Dataset):
+    pass
+    
+class AllDatasetsShared(Dataset):
+    pass
+
+def get_dataset(dfs_all, env, split=None, concat_group=False, protected_attr=None, 
+                imagenet_norm=True, augment=0, use_cache=False, subset_label=None, smaller_label_set=False):
+    prepareDict = prepare_image_data_paths()
+    # Image transformations based on augmentation type
+    if augment == 1:
+        image_transforms = [transforms.RandomHorizontalFlip(), 
+                            transforms.RandomRotation(10),     
+                            transforms.RandomResizedCrop(size=224, scale=(0.75, 1.0)),
+                            transforms.ToTensor()]
+    elif augment == 0:
+        image_transforms = [transforms.ToTensor()]
+    elif augment == -1:
+        image_transforms = []
+
+    if imagenet_norm and augment != -1:
+        image_transforms.append(transforms.Normalize(prepareDict["IMAGENET_MEAN"], prepareDict["IMAGENET_STD"]))             
+    
+    # Determine splits
+    splits = [split] if split else ['train', 'val', 'test']
+    
+    # Create datasets for each split
+    datasets = []
+    for s in splits:
+        cache_dir = Path(cache_dir) / f'{env}/'
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        dfs = dfs_all[s]
+        dataset = ConcatWrapper(
+            AllDatasetsShared(dfs, label_set= prepareDict["take_labels"] if smaller_label_set else prepareDict["take_labels_all"],
+                              transform=transforms.Compose(image_transforms), split=s, 
+                              cache=use_cache, cache_dir=cache_dir, subset_label=subset_label),
+            concat_group=concat_group, protected_attr=protected_attr)
+        datasets.append(dataset)
+    
+    # Return the appropriate dataset
+    if len(datasets) == 0:
+        return None
+    elif len(datasets) == 1:
+        return datasets[0]
+    else:
+        ds = ConcatDataset(datasets)
+        ds.dataframe = pd.concat([d.dataframe for d in datasets])
+        return ds
+
